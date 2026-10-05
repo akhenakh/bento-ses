@@ -1,0 +1,23 @@
+input:
+  generate:
+    mapping: |
+      root.site = "example.org"
+      root.email = "recipient@example.com"
+      root.name = "World"
+    interval: 30s
+    count: 1
+
+pipeline:
+  processors: []
+
+output:
+  aws_ses:
+    region: eu-west-1
+    from: "Alerts <alerts@example.com>"
+    to:
+      - "{{ .email }}"
+    subject: "Report for {{ .site }}"
+    text: "Hello {{ .name }}, this is a test email sent from Bento."
+    html: |
+      <h1>Hello {{ .name }}</h1>
+      <p>Report for {{ .site }}</p>

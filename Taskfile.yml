@@ -1,0 +1,74 @@
+version: "3"
+
+vars:
+  BIN: bin/bento-ses
+  LDFLAGS: -s -w
+  CONFIGS: workflow.yaml examples/email_with_attachment.yaml
+
+tasks:
+  build:
+    desc: Build the custom Bento binary into {{.BIN}}
+    cmds:
+      - CGO_ENABLED=0 go build -trimpath -ldflags "{{.LDFLAGS}}" -o {{.BIN}} .
+    sources:
+      - ./*.go
+      - ses/*.go
+      - go.mod
+      - go.sum
+    generates:
+      - "{{.BIN}}"
+
+  test:
+    desc: Run unit tests (excludes e2e-tagged tests)
+    cmds:
+      - go test ./...
+
+  test-e2e:
+    desc: Run the kumo-backed end-to-end tests
+    cmds:
+      - go test -tags e2e -count=1 -run EndToEnd -v ./ses/
+
+  test-all:
+    desc: Run unit and end-to-end tests
+    cmds:
+      - task: test
+      - task: test-e2e
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  fmt:
+    desc: Format all Go files
+    cmds:
+      - gofmt -l -w .
+
+  tidy:
+    desc: Reconcile go.mod/go.sum
+    cmds:
+      - go mod tidy
+
+  lint:
+    desc: Lint the example Bento configs with the built binary
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} lint {{.CONFIGS}}
+
+  run:
+    desc: Run the binary — pass args after -- (eg. task run -- -c workflow.yaml)
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} {{.CLI_ARGS}}
+
+  check:
+    desc: vet + unit + e2e + config lint (pre-commit gate)
+    deps: [vet]
+    cmds:
+      - task: test-all
+      - task: lint
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf bin dist

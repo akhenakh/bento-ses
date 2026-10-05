@@ -1,0 +1,39 @@
+# Example: HTML email with an inline image and an attachment.
+
+input:
+  generate:
+    mapping: |
+      root.recipient = "bob@example.com"
+      root.site = "example.org"
+      # A base64 encoded PNG (in real usage this would come from your data).
+      root.logo_b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+      # A base64 encoded text file used as an attachment.
+      root.report_name = "report.txt"
+      root.report_b64 = "SGVsbG8gZnJvbSBCZW50byBhbmQgQW1hem9uIFNFUyE="
+    interval: 1m
+    count: 1
+
+pipeline:
+  processors: []
+
+output:
+  aws_ses:
+    region: eu-west-1
+    from: "Reports <reports@example.com>"
+    to:
+      - "{{ .recipient }}"
+    subject: "Daily report for {{ .site }}"
+    text: "Please find the daily report attached."
+    html: |
+      <h1>Daily report for {{ .site }}</h1>
+      <p>See the attached report.</p>
+      <img src="cid:logo" alt="logo">
+    images:
+      - content_id: logo
+        filename: logo.png
+        content_type: image/png
+        data: "{{ .logo_b64 }}"
+    attachments:
+      - filename: "{{ .report_name }}"
+        content_type: text/plain
+        data: "{{ .report_b64 }}"
